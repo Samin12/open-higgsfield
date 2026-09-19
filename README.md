@@ -59,7 +59,7 @@ React 19 / Next App Router source runs through vinext on ChatGPT Sites. Sites pr
 
 Configure `STUDIO_SECRET` as a **Sites runtime secret** before publishing. Keep it stable: rotating it requires re-encrypting saved API keys. Never place API keys or private reference videos in Git. Deploy this app behind Sites dispatch; a generic server must not trust public callers' `oai-authenticated-user-*` headers.
 
-Jobs refresh while a workspace is open; reopening resumes polling. This initial release does not have a background scheduler, billing dashboard, or automatic provider-charge reconciliation. A submission with an uncertain response must be checked in the provider console before another request is made. Result archival is capped at 250 MB per output; unsupported/oversized provider responses remain temporary links with a visible warning.
+The board refreshes every 15 seconds to show teammates’ changes, and active jobs poll every 8 seconds while a workspace is open; reopening resumes polling. This initial release does not have a background scheduler, billing dashboard, or automatic provider-charge reconciliation. A submission with an uncertain response must be checked in the provider console before another request is made. Result archival is capped at 250 MB per output; unsupported/oversized provider responses remain temporary links with a visible warning.
 
 ## Attribution
 

@@ -102,9 +102,11 @@ export default function Studio({ signedIn }: { signedIn: boolean }) {
     load().catch((e) => setError(e.message));
   }, [load]);
   useEffect(() => {
-    if (!data?.jobs.some((j) => ["queued", "in_progress"].includes(j.status)))
-      return;
+    if (!data) return;
+    let polling = false;
     const t = setInterval(async () => {
+      if (polling) return;
+      polling = true;
       try {
         await Promise.all(
           data.jobs
@@ -114,8 +116,10 @@ export default function Studio({ signedIn }: { signedIn: boolean }) {
         await load();
       } catch (e) {
         setError((e as Error).message);
+      } finally {
+        polling = false;
       }
-    }, 8000);
+    }, data.jobs.some(j => ["queued", "in_progress"].includes(j.status)) ? 8000 : 15000);
     return () => clearInterval(t);
   }, [data?.jobs, load]);
   useEffect(() => {

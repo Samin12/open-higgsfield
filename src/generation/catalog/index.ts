@@ -1,3 +1,4 @@
+import { genjutsuMotion, genjutsuSwap } from "./genjutsu";
 import { dop } from "./dop";
 import { flux2 } from "./flux-2";
 import { flux3 } from "./flux-3";
@@ -37,6 +38,7 @@ import { wan3Prime } from "./wan-3-prime";
 import { zImageTurbo } from "./z-image-turbo";
 
 export const MODELS: readonly ModelEntry[] = [
+  genjutsuMotion, genjutsuSwap,
   soul2,
   soulCinema,
   seedance25,

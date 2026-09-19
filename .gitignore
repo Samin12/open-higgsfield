@@ -12,3 +12,11 @@ tsconfig.tsbuildinfo
 
 .env*
 .idea
+
+.wrangler/
+.sites-runtime/
+.openai-build/
+
+.dev.vars
+
+.vinext/

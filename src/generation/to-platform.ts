@@ -5,6 +5,8 @@ type Mapped = { path: string; body: Record<string, unknown> };
 type Mapper = (plane: GenerationPlane) => Mapped;
 
 const MAP: Record<string, Mapper> = {
+  "genjutsu-motion": (plane) => mapGenjutsu(plane, "motion-transfer"),
+  "genjutsu-swap": (plane) => mapGenjutsu(plane, "object-swap"),
   "soul-cinema": (plane) => mapSoul(plane, "higgsfield-ai/soul/cinema"),
   "soul-2": (plane) => mapSoul(plane, "higgsfield-ai/soul/v2/standard"),
   "kling-3-turbo": mapKlingTurbo,
@@ -198,4 +200,8 @@ function mapSeedanceSource(plane: GenerationPlane, path: string, withDuration: b
       ...(audios.length ? { audio_urls: audios } : {}),
     },
   };
+}
+
+function mapGenjutsu(plane: GenerationPlane, mode: string): Mapped {
+ return {path: `higgsfiled/genjutsu/${mode}/v1.0`, body: {prompt:plane.prompt.text,video_url:urls(plane,"video")[0],image_urls:urls(plane,"reference"),resolution:plane.settings.resolution}};
 }

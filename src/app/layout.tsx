@@ -28,11 +28,11 @@ export const metadata: Metadata = {
   openGraph: openGraphFor({ path: "/" }),
   twitter: twitterFor(),
   robots: {
-    index: true,
-    follow: true,
+    index: false,
+    follow: false,
     googleBot: {
-      index: true,
-      follow: true,
+      index: false,
+      follow: false,
       "max-image-preview": "large",
       "max-snippet": -1,
       "max-video-preview": -1,
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
 /* The studio is the only surface, and it ships a single look, so the browser
    chrome is pinned to its ground rather than following a preference. */
 export const viewport: Viewport = {
-  colorScheme: "dark",
+  colorScheme: "light",
   themeColor: STUDIO_BG,
 };
 

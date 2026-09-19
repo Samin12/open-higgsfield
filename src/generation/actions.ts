@@ -1,90 +1,84 @@
 "use server";
 
-import { cookies } from "next/headers";
-
-import { getModel, parseSettings } from "./catalog";
-import type { GenerationPlane } from "./catalog/types";
 import {
-  MissingCredentialsError,
-  PLATFORM_KEY_COOKIE,
-  PLATFORM_KEY_COOKIE_OPTIONS,
-  decodeCredentials,
-  encodeCredentials,
-  parseCredentialInput,
-} from "./credentials";
-import { createPlatformClient } from "./platform";
-import type { StatusResult } from "./platform";
-import { toPlatform } from "./to-platform";
+  actor,
+  db,
+  encrypt,
+  now,
+  projectAccess,
+  apiKey,
+  provider,
+} from "@/studio/server";
+import { parseCredentialInput } from "./credentials";
+import type { GenerationPlane } from "./catalog/types";
+import type { QueuedGeneration, StatusResult } from "./platform";
 
+// Compatibility for the retained original components. All writes now use the
+// same authenticated, server-side account storage as Samin Studio.
 export async function savePlatformCredentials(data: unknown) {
-  const { apiKey } = parseCredentialInput(data);
-  const jar = await cookies();
-  jar.set(PLATFORM_KEY_COOKIE, encodeCredentials(apiKey), PLATFORM_KEY_COOKIE_OPTIONS);
+  const user = await actor();
+  const { apiKey: key } = parseCredentialInput(data);
+  await db()
+    .prepare(
+      "INSERT INTO credentials(user_id,encrypted_key,updated_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET encrypted_key=excluded.encrypted_key,updated_at=excluded.updated_at",
+    )
+    .bind(user.id, await encrypt(key), now())
+    .run();
 }
-
 export async function clearPlatformCredentials() {
-  const jar = await cookies();
-  jar.set(PLATFORM_KEY_COOKIE, "", { ...PLATFORM_KEY_COOKIE_OPTIONS, maxAge: 0 });
+  const user = await actor();
+  await db()
+    .prepare("DELETE FROM credentials WHERE user_id=?")
+    .bind(user.id)
+    .run();
 }
-
 export async function hasPlatformCredentials() {
-  return (await readStoredCredentials()) !== null;
+  const user = await actor();
+  return !!(await db()
+    .prepare("SELECT user_id FROM credentials WHERE user_id=?")
+    .bind(user.id)
+    .first());
 }
-
-export async function submitGeneration(plane: GenerationPlane) {
-  const model = getModel(plane.model);
-  const parsed: GenerationPlane = {
-    ...plane,
-    settings: parseSettings(model, plane.settings),
-  };
-  const { path, body } = toPlatform(parsed);
-  return createPlatformClient(await readCredentials()).submit(path, body);
+export async function submitGeneration(
+  _plane: GenerationPlane,
+): Promise<QueuedGeneration> {
+  await actor();
+  throw new Error(
+    "Create a project draft and review its quote in Samin Studio before generating.",
+  );
 }
-
-/** Every request in flight, answered in one round trip. Next dispatches server
-    actions one at a time per client, so a poll per run would queue ahead of the
-    next submit — the fan-out belongs on this side of the call, where it is
-    genuinely parallel. */
-export async function getGenerationStatuses(data: unknown): Promise<StatusResult[]> {
-  const requestIds = parseRequestIds(data);
-  const client = createPlatformClient(await readCredentials());
+export async function getGenerationStatuses(
+  data: unknown,
+): Promise<StatusResult[]> {
+  const user = await actor();
+  const ids = (data as { requestIds?: unknown })?.requestIds;
+  if (
+    !Array.isArray(ids) ||
+    !ids.length ||
+    ids.length > 50 ||
+    ids.some((id) => typeof id !== "string")
+  )
+    throw new Error("Invalid request IDs");
   return Promise.all(
-    requestIds.map(async (requestId): Promise<StatusResult> => {
+    ids.map(async (requestId) => {
       try {
-        return { requestId, status: await client.status(requestId) };
-      } catch (caught) {
-        return { requestId, error: caught instanceof Error ? caught.message : String(caught) };
+        const job = await db()
+          .prepare("SELECT project_id,user_id FROM jobs WHERE request_id=?")
+          .bind(requestId)
+          .first<any>();
+        if (!job) throw new Error("Generation not found.");
+        await projectAccess(user.id, job.project_id);
+        const status = await provider(
+          "requests/" + encodeURIComponent(requestId) + "/status",
+          await apiKey(job.user_id),
+        );
+        return { requestId, status: { ...status, requestId } };
+      } catch {
+        return {
+          requestId,
+          error: "Generation is unavailable to this account.",
+        };
       }
     }),
   );
-}
-
-async function readStoredCredentials() {
-  const jar = await cookies();
-  return decodeCredentials(jar.get(PLATFORM_KEY_COOKIE)?.value);
-}
-
-async function readCredentials() {
-  const stored = await readStoredCredentials();
-  if (!stored) throw new MissingCredentialsError();
-  const baseUrl = process.env.HF_API_BASE_URL;
-  if (!baseUrl) throw new Error("Missing HF_API_BASE_URL");
-  return { ...stored, baseUrl };
-}
-
-function parseRequestIds(data: unknown): string[] {
-  const payload = asObject(data, "Invalid status payload");
-  const requestIds = payload.requestIds;
-  if (!Array.isArray(requestIds) || requestIds.length === 0) {
-    throw new Error("Invalid request ids");
-  }
-  return requestIds.map((requestId) => {
-    if (typeof requestId !== "string" || !requestId) throw new Error("Invalid request id");
-    return requestId;
-  });
-}
-
-function asObject(data: unknown, message: string): Record<string, unknown> {
-  if (data === null || typeof data !== "object" || Array.isArray(data)) throw new Error(message);
-  return data as Record<string, unknown>;
 }

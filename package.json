@@ -1,25 +1,45 @@
 {
-  "name": "openhiggsfield-ai",
+  "name": "samin-studio",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --port 3000",
-    "build": "next build",
-    "start": "next start",
-    "brand": "node scripts/build-brand-assets.mjs"
+    "dev": "node scripts/run-framework.mjs dev",
+    "build": "node scripts/run-framework.mjs build",
+    "start": "node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --local --persist-to .wrangler/state --ip 127.0.0.1 --inspector-port 0",
+    "brand": "node scripts/build-brand-assets.mjs",
+    "install:ci": "pnpm install --frozen-lockfile",
+    "db:generate": "drizzle-kit generate",
+    "test": "node --experimental-strip-types --test tests/*.test.ts"
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.14.10",
     "@vercel/blob": "^2.8.0",
     "next": "^16.0.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "zustand": "^5.0.15"
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "zustand": "^5.0.15",
+    "drizzle-orm": "0.45.2",
+    "lucide-react": "^1.31.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
-    "typescript": "^5.9.2"
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "typescript": "5.9.3",
+    "@cloudflare/vite-plugin": "1.37.1",
+    "@cloudflare/workers-types": "4.20260515.1",
+    "@vitejs/plugin-react": "6.0.2",
+    "@vitejs/plugin-rsc": "0.5.26",
+    "drizzle-kit": "0.31.10",
+    "react-server-dom-webpack": "19.2.6",
+    "vinext": "1.0.0-beta.5",
+    "vite": "8.0.13",
+    "wrangler": "4.92.0"
+  },
+  "overrides": {
+    "miniflare": {
+      "sharp": "0.35.4"
+    }
   }
 }
